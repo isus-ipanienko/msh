@@ -122,8 +122,17 @@ static bool _clear_buffers()
 
 static bool _parse()
 {
-	ctx.argv[0] = ctx.command_buffer;
 	ctx.argc = 0;
+
+	if (ctx.command_buffer[0] != '\0')
+	{
+		ctx.argv[0] = ctx.command_buffer;
+		ctx.argc = 1;
+	}
+	else
+	{
+		return true;
+	}
 
 	for (size_t i = 0; i < ctx.current_command_length && ctx.argc < MAX_ARG_NUM; ++i)
 	{
@@ -158,11 +167,11 @@ static bool _find_command(size_t *index)
 		if (strncmp(ctx.argv[0], msh_commands[i].name, strlen(msh_commands[i].name)) == 0)
 		{
 			*index = i;
-			break;
+			return true;
 		}
 	}
 
-	return true;
+	return false;
 }
 
 static bool _execute_command()
@@ -172,6 +181,12 @@ static bool _execute_command()
 	if (!_parse())
 	{
 		msh_printf("ERROR: Failed to parse arguments.");
+		ret = false;
+		goto EXECUTE_COMMAND_EXIT;
+	}
+
+	if (ctx.argc == 0)
+	{
 		ret = false;
 		goto EXECUTE_COMMAND_EXIT;
 	}
@@ -257,6 +272,7 @@ static bool _special_char(char input)
 	{
 		_clear_buffers();
 		_print_char(input);
+		_print_char(MSH_PROMPT);
 	}
 
 	return true;
@@ -325,7 +341,7 @@ bool msh_printf(const char* format, ...)
 	va_list args;
 	va_start(args, format);
 
-	int length = vsnprintf(ctx.printf_buffer, 2, format, args);
+	int length = vsnprintf(ctx.printf_buffer, sizeof(ctx.printf_buffer), format, args);
 	length = (length < MAX_PRINTF_LENGTH) ? length : MAX_PRINTF_LENGTH;
 
 	_print_char('\n');
