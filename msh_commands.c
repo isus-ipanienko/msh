@@ -9,6 +9,8 @@
 
 #include "msh.h"
 
+#include <string.h>
+
 /* Defines --------------------------------------------------------------- */
 
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof(arr[0]))
@@ -38,12 +40,36 @@ int msh_man(int argc, char *argv[])
 	return 0;
 }
 
+int msh_log_en(int argc, char *argv[])
+{
+	if (argc != 2)
+	{
+		return -1;
+	}
+
+	if (strncmp(argv[1], "on", strlen("on")) == 0)
+	{
+		msh_enable_logs(true);
+	}
+	else if (strncmp(argv[1], "off", strlen("off")) == 0)
+	{
+		msh_enable_logs(false);
+	}
+	else
+	{
+		return -2;
+	}
+
+	return 0;
+}
+
 /* Command list ---------------------------------------------------------- */
 
 static const struct msh_command_t commands[] = {
   {"help", msh_help, "lists all commands"},
   {"man", msh_man, "manual for the terminal"},
   {"hello", msh_hello, "say hello!"},
+  {"log", msh_log_en, "on - turns logs on; off - turns logs off"},
 };
 
 const struct msh_command_t *const msh_commands = commands;
