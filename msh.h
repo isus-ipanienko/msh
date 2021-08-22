@@ -23,6 +23,10 @@ bool msh_process(char input);
 
 bool msh_printf(const char* format, ...);
 
+bool msh_log(const char* format, ...);
+
+bool msh_enable_logs(bool enable);
+
 bool msh_init(write_callback_t write);
 
 #endif /* INC_MSH_H_ */
