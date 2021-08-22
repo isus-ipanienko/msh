@@ -17,6 +17,14 @@
 
 /* Commands -------------------------------------------------------------- */
 
+static bool _arg_match(const char* arg, const char* pattern)
+{
+	return (strncmp(arg, pattern, strlen(pattern)) == 0)
+			&& (arg[strlen(pattern)] == '\0');
+}
+
+/* Commands -------------------------------------------------------------- */
+
 int msh_hello(int argc, char *argv[])
 {
 	msh_printf("Hello world!");
@@ -47,11 +55,11 @@ int msh_log_en(int argc, char *argv[])
 		return -1;
 	}
 
-	if (strncmp(argv[1], "on", strlen("on")) == 0)
+	if (_arg_match(argv[1], "on"))
 	{
 		msh_enable_logs(true);
 	}
-	else if (strncmp(argv[1], "off", strlen("off")) == 0)
+	else if (_arg_match(argv[1], "off"))
 	{
 		msh_enable_logs(false);
 	}
