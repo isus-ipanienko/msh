@@ -28,7 +28,7 @@
 #define KEY_CODE_SPACE					0x20
 #define KEY_CODE_TAB					3
 
-#define MSH_PROMPT						'>'
+#define MSH_PROMPT						"msh> "
 
 /* Static variables ------------------------------------------------------ */
 
@@ -73,8 +73,10 @@ static void _print_newline()
 
 static void _print_prompt()
 {
-	_print_newline();
-	_print_char(MSH_PROMPT);
+	for (size_t i = 0; i < strlen(MSH_PROMPT); i++)
+	{
+		_print_char(MSH_PROMPT[i]);
+	}
 }
 
 static void _move_cursor(char dir)
@@ -239,6 +241,7 @@ static bool _execute_command()
 
 	CLEANUP:
 	_clear_buffers();
+	_print_newline();
 	_print_prompt();
 	return ret;
 }
@@ -295,7 +298,7 @@ static bool _special_char(char input)
 	{
 		_clear_buffers();
 		_print_char(input);
-		_print_char(MSH_PROMPT);
+		_print_prompt();
 	}
 
 	return true;
@@ -393,6 +396,7 @@ bool msh_log(const char* format, ...)
 	va_end(args);
 
 	/* reprint command */
+	_print_newline();
 	_print_prompt();
 	for (size_t i = 0; i < ctx.current_command_length; i++)
 	{
@@ -418,6 +422,7 @@ bool msh_init(write_callback_t write)
 	_clear_buffers();
 
 	ctx.write = write;
+	_print_newline();
 	_print_prompt();
 
 	return true;
