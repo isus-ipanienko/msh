@@ -186,8 +186,11 @@ static bool _find_command(size_t *index)
 	{
 		if (strncmp(ctx.argv[0], msh_commands[i].name, strlen(msh_commands[i].name)) == 0)
 		{
-			*index = i;
-			return true;
+			if (ctx.argv[0][strlen(msh_commands[i].name)] == '\0')
+			{
+				*index = i;
+				return true;
+			}
 		}
 	}
 
@@ -230,7 +233,7 @@ static bool _execute_command()
 
 	if (retval < 0)
 	{
-		msh_printf("s% returned with exit code %d.", msh_commands[command_index].name, retval);
+		msh_printf("%s returned with exit code %i.", msh_commands[command_index].name, retval);
 		ret = false;
 	}
 
