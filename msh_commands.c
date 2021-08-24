@@ -44,7 +44,7 @@ int msh_man(int argc, char *argv[])
 {
 	msh_printf("Use arrow keys to edit the current line.");
 	msh_printf("Use ctrl + L to clear the widow.");
-	msh_printf("Use tab to cycle through autocompleted commands. (WIP)");
+	msh_printf("Use tab to cycle through autocompleted commands.");
 	return 0;
 }
 
@@ -76,8 +76,8 @@ int msh_log_en(int argc, char *argv[])
 static const struct msh_command_t commands[] = {
   {"help", msh_help, "lists all commands"},
   {"man", msh_man, "manual for the terminal"},
-  {"hello", msh_hello, "say hello!"},
   {"log", msh_log_en, "on - turns logs on; off - turns logs off"},
+  {"hello", msh_hello, "say hello!"},
 };
 
 const struct msh_command_t *const msh_commands = commands;
