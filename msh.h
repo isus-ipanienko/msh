@@ -8,10 +8,11 @@
 
 typedef void (*write_callback_t)(const char* output);
 
-struct msh_command_t {
-	const char *name;
-	int (*callback)(int argc, char *argv[]);
-	const char *help;
+struct msh_command_t
+{
+    const char *name;
+    int (*callback)(int argc, char *argv[]);
+    const char *help;
 };
 
 extern const struct msh_command_t *const msh_commands;
