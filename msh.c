@@ -14,6 +14,8 @@
 #define MAX_PRINTF_LENGTH                       64
 #define MAX_ARG_NUM                             5
 
+#define MSH_PROMPT                              "msh> "
+
 #define KEY_CODE_CR                             0x0D
 #define KEY_CODE_LF                             0x0A
 #define KEY_CODE_BACKSPACE                      0x08
@@ -23,13 +25,11 @@
 #define KEY_CODE_ARROW_RIGHT                    'C'
 #define KEY_CODE_ARROW_LEFT                     'D'
 #define KEY_CODE_CLEAR_LINE_AFTER_CURSOR        'K'
-#define KEY_CODE_CLEAR                          '\f'
+#define KEY_CODE_CLEAR_TERMINAL                 '\f'
 #define KEY_CODE_ESCAPE                         '\e'
 #define KEY_CODE_BRACKET                        0x5B
 #define KEY_CODE_SPACE                          0x20
 #define KEY_CODE_TAB                            '\t'
-
-#define MSH_PROMPT                              "msh> "
 
 /* Static variables ------------------------------------------------------ */
 
@@ -140,7 +140,7 @@ static bool _msh_vsnprintf(const char* format, va_list args)
     return true;
 }
 
-static bool _clear_buffers()
+static void _clear_buffers()
 {
     memset(ctx.command_buffer, 0, sizeof(ctx.command_buffer));
     ctx.current_command_length = 0;
@@ -152,8 +152,6 @@ static bool _clear_buffers()
     memset(ctx.autocomplete_buffer, 0, sizeof(ctx.autocomplete_buffer));
     ctx.autocomplete_index_offset = 0;
     ctx.autocomplete_state = AUTOCOMPLETE_TEMPLATE_NOT_SET;
-
-    return true;
 }
 
 static void _print_command()
@@ -165,21 +163,18 @@ static void _print_command()
     }
 }
 
-static bool _parse()
+static void _parse()
 {
-    ctx.argc = 0;
-
-    if (ctx.command_buffer[0] != '\0')
+    if (ctx.command_buffer[0] == '\0')
     {
-        ctx.argv[0] = ctx.command_buffer;
-        ctx.argc = 1;
-    }
-    else
-    {
-        return true;
+        ctx.argc = 0;
+        return;
     }
 
-    for (size_t i = 0; i < ctx.current_command_length && ctx.argc < MAX_ARG_NUM; ++i)
+    ctx.argv[0] = ctx.command_buffer;
+    ctx.argc = 1;
+
+    for (size_t i = 1; i < ctx.current_command_length && ctx.argc < MAX_ARG_NUM; ++i)
     {
         char *const c = &ctx.command_buffer[i];
         if (*c == ' ')
@@ -191,29 +186,29 @@ static bool _parse()
             }
         }
     }
-
-    return true;
 }
 
 static bool _find_command(size_t *index)
 {
     if (ctx.argc == 0)
     {
+        msh_printf("ERROR: No command name!.");
         return false;
     }
 
     if (ctx.argc > MAX_ARG_NUM)
     {
-        msh_printf("ERROR: Too many arguments.");
+        msh_printf("ERROR: Too many arguments!");
+        return false;
     }
 
     size_t command_name_length = 0;
     for (size_t i = 0; i < msh_num_commands; i++)
     {
         command_name_length = strlen(msh_commands[i].name);
-        if (strncmp(ctx.argv[0], msh_commands[i].name, command_name_length) == 0)
+        if (ctx.argv[0][command_name_length] == '\0')
         {
-            if (strnlen(ctx.argv[0], command_name_length + 1) == command_name_length)
+            if (strncmp(ctx.argv[0], msh_commands[i].name, command_name_length) == 0)
             {
                 *index = i;
                 return true;
@@ -228,13 +223,7 @@ static bool _execute_command()
 {
     bool ret = true;
 
-    if (!_parse())
-    {
-        msh_printf("ERROR: Failed to parse arguments.");
-        ret = false;
-        goto CLEANUP;
-    }
-
+    _parse();
     if (ctx.argc == 0)
     {
         ret = false;
@@ -280,7 +269,7 @@ static bool _autocomplete()
         memset(&ctx.autocomplete_buffer[ctx.current_command_length], 0, sizeof(ctx.autocomplete_buffer) - ctx.current_command_length);
     }
 
-    size_t index = msh_num_commands;
+    size_t matched_command_index = msh_num_commands;
     size_t command_name_length = 0;
     size_t autocomplete_length = strlen(ctx.autocomplete_buffer);
     for (uint8_t j = 0; j < 2; j++)
@@ -294,11 +283,11 @@ static bool _autocomplete()
                 continue;
             }
 
-            if (strncmp(ctx.autocomplete_buffer, msh_commands[i].name, autocomplete_length) == 0)
+            if (i >= ctx.autocomplete_index_offset)
             {
-                if (i >= ctx.autocomplete_index_offset)
+                if (strncmp(ctx.autocomplete_buffer, msh_commands[i].name, autocomplete_length) == 0)
                 {
-                    index = i;
+                    matched_command_index = i;
                     ctx.autocomplete_index_offset = (i + 1) % msh_num_commands;
                     memcpy(&ctx.command_buffer[autocomplete_length], &msh_commands[i].name[autocomplete_length], command_name_length - autocomplete_length);
                     memset(&ctx.command_buffer[command_name_length], 0, sizeof(ctx.command_buffer) - command_name_length);
@@ -309,7 +298,7 @@ static bool _autocomplete()
             }
         }
 
-        if (index != msh_num_commands)
+        if (matched_command_index != msh_num_commands)
         {
             break;
         }
@@ -317,7 +306,7 @@ static bool _autocomplete()
         ctx.autocomplete_index_offset = 0;
     }
 
-    if (index == msh_num_commands)
+    if (matched_command_index == msh_num_commands)
     {
         return false;
     }
@@ -373,7 +362,7 @@ static bool _special_char(char input)
         ctx.escape_state = ESCAPE_IDLE;
     }
 
-    if (input == KEY_CODE_CLEAR)
+    if (input == KEY_CODE_CLEAR_TERMINAL)
     {
         _clear_buffers();
         _print_char(input);
