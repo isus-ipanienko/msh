@@ -10,33 +10,33 @@
 
 /* Defines --------------------------------------------------------------- */
 
-#define MAX_COMMAND_LENGTH                      32
-#define MAX_PRINTF_LENGTH                       64
-#define MAX_ARG_NUM                             5
+#define MAX_COMMAND_LENGTH                  32
+#define MAX_PRINTF_LENGTH                   64
+#define MAX_ARG_NUM                         5
 
-#define MSH_PROMPT                              "msh> "
+#define MSH_PROMPT                          "msh> "
 
-#define KEY_CODE_CR                             0x0D
-#define KEY_CODE_LF                             0x0A
-#define KEY_CODE_BACKSPACE                      0x08
-#define KEY_CODE_BACKSPACE_ALT                  0x7F
-#define KEY_CODE_ARROW_UP                       'A'
-#define KEY_CODE_ARROW_DOWN                     'B'
-#define KEY_CODE_ARROW_RIGHT                    'C'
-#define KEY_CODE_ARROW_LEFT                     'D'
-#define KEY_CODE_CLEAR_LINE_AFTER_CURSOR        'K'
-#define KEY_CODE_CLEAR_TERMINAL                 '\f'
-#define KEY_CODE_ESCAPE                         '\e'
-#define KEY_CODE_BRACKET                        0x5B
-#define KEY_CODE_SPACE                          0x20
-#define KEY_CODE_TAB                            '\t'
+#define KEY_CODE_CR                         0x0D
+#define KEY_CODE_LF                         0x0A
+#define KEY_CODE_BACKSPACE                  0x08
+#define KEY_CODE_BACKSPACE_ALT              0x7F
+#define KEY_CODE_ARROW_UP                   'A'
+#define KEY_CODE_ARROW_DOWN                 'B'
+#define KEY_CODE_ARROW_RIGHT                'C'
+#define KEY_CODE_ARROW_LEFT                 'D'
+#define KEY_CODE_CLEAR_LINE_AFTER_CURSOR    'K'
+#define KEY_CODE_CLEAR_TERMINAL             '\f'
+#define KEY_CODE_ESCAPE                     '\e'
+#define KEY_CODE_BRACKET                    0x5B
+#define KEY_CODE_SPACE                      0x20
+#define KEY_CODE_TAB                        '\t'
 
 /* Static variables ------------------------------------------------------ */
 
 enum escape_machine
 {
     ESCAPE_IDLE,
-    ESCAPE_SET
+    ESCAPE_SET,
 };
 
 enum autocomplete_machine
@@ -70,30 +70,24 @@ static struct msh_context ctx;
 
 /* Static methods -------------------------------------------------------- */
 
-static void _print_char(const char c)
-{
-    ctx.write(&c);
-}
-
 static void _print_newline()
 {
-    _print_char('\n');
-    _print_char('\r');
+    ctx.write('\n\r',
+              2);
 }
 
 static void _print_prompt()
 {
-    for (size_t i = 0; i < strlen(MSH_PROMPT); i++)
-    {
-        _print_char(MSH_PROMPT[i]);
-    }
+    ctx.write(MSH_PROMPT,
+              sizeof(MSH_PROMPT) - 1);
 }
 
 static void _move_cursor(char dir)
 {
-    _print_char(KEY_CODE_ESCAPE);
-    _print_char(KEY_CODE_BRACKET);
-    _print_char(dir);
+    const char dir_buff[3] = {KEY_CODE_ESCAPE, KEY_CODE_BRACKET, dir};
+
+    ctx.write(dir_buff,
+              3);
 }
 
 static bool _seek_left()
@@ -122,9 +116,14 @@ static bool _seek_right()
     return true;
 }
 
-static bool _msh_vsnprintf(const char* format, va_list args)
+static bool _msh_vsnprintf(const char *format,
+                           va_list args)
 {
-    int length = vsnprintf(ctx.printf_buffer, sizeof(ctx.printf_buffer), format, args);
+    int length = vsnprintf(ctx.printf_buffer,
+                           sizeof(ctx.printf_buffer),
+                           format,
+                           args);
+
     length = (length < MAX_PRINTF_LENGTH) ? length : MAX_PRINTF_LENGTH;
 
     if (length < 0)
@@ -132,24 +131,29 @@ static bool _msh_vsnprintf(const char* format, va_list args)
         return false;
     }
 
-    for (size_t i = 0; i < length; i++)
-    {
-        _print_char(ctx.printf_buffer[i]);
-    }
+    ctx.write(ctx.printf_buffer,
+              length);
 
     return true;
 }
 
 static void _clear_buffers()
 {
-    memset(ctx.command_buffer, 0, sizeof(ctx.command_buffer));
+    memset(ctx.command_buffer,
+           0,
+           sizeof(ctx.command_buffer));
+
+    memset(ctx.argv,
+           0,
+           sizeof(ctx.argv));
+
+    memset(ctx.autocomplete_buffer,
+           0,
+           sizeof(ctx.autocomplete_buffer));
+
     ctx.current_command_length = 0;
     ctx.cursor_pointer = 0;
-
-    memset(ctx.argv, 0, sizeof(ctx.argv));
     ctx.argc = 0;
-
-    memset(ctx.autocomplete_buffer, 0, sizeof(ctx.autocomplete_buffer));
     ctx.autocomplete_index_offset = 0;
     ctx.autocomplete_state = AUTOCOMPLETE_TEMPLATE_NOT_SET;
 }
@@ -157,10 +161,9 @@ static void _clear_buffers()
 static void _print_command()
 {
     _print_prompt();
-    for (size_t i = 0; i < ctx.current_command_length; i++)
-    {
-        _print_char(ctx.command_buffer[i]);
-    }
+
+    ctx.write(ctx.command_buffer,
+              ctx.current_command_length);
 }
 
 static void _parse()
@@ -168,6 +171,7 @@ static void _parse()
     if (ctx.command_buffer[0] == '\0')
     {
         ctx.argc = 0;
+
         return;
     }
 
@@ -177,9 +181,11 @@ static void _parse()
     for (size_t i = 1; i < ctx.current_command_length && ctx.argc < MAX_ARG_NUM; ++i)
     {
         char *const c = &ctx.command_buffer[i];
+
         if (*c == ' ')
         {
             *c = '\0';
+
             if (*(c + 1) != ' ')
             {
                 ctx.argv[ctx.argc++] = c + 1;
@@ -193,24 +199,31 @@ static bool _find_command(size_t *index)
     if (ctx.argc == 0)
     {
         msh_printf("ERROR: No command name!.");
+
         return false;
     }
 
     if (ctx.argc > MAX_ARG_NUM)
     {
         msh_printf("ERROR: Too many arguments!");
+
         return false;
     }
 
     size_t command_name_length = 0;
+
     for (size_t i = 0; i < msh_num_commands; i++)
     {
         command_name_length = strlen(msh_commands[i].name);
+
         if (ctx.argv[0][command_name_length] == '\0')
         {
-            if (strncmp(ctx.argv[0], msh_commands[i].name, command_name_length) == 0)
+            if (strncmp(ctx.argv[0],
+                        msh_commands[i].name,
+                        command_name_length) == 0)
             {
                 *index = i;
+
                 return true;
             }
         }
@@ -224,6 +237,7 @@ static bool _execute_command()
     bool ret = true;
 
     _parse();
+
     if (ctx.argc == 0)
     {
         ret = false;
@@ -231,6 +245,7 @@ static bool _execute_command()
     }
 
     size_t command_index = msh_num_commands;
+
     if (!_find_command(&command_index))
     {
         msh_printf("ERROR: Failed to match a command name.");
@@ -245,18 +260,22 @@ static bool _execute_command()
         goto CLEANUP;
     }
 
-    int retval = msh_commands[command_index].callback(ctx.argc, ctx.argv);
+    int retval = msh_commands[command_index].callback(ctx.argc,
+                                                      ctx.argv);
 
     if (retval < 0)
     {
-        msh_printf("%s returned with exit code %i.", msh_commands[command_index].name, retval);
+        msh_printf("%s returned with exit code %i.",
+                   msh_commands[command_index].name,
+                   retval);
         ret = false;
     }
 
-    CLEANUP:
+CLEANUP:
     _clear_buffers();
     _print_newline();
     _print_prompt();
+
     return ret;
 }
 
@@ -265,13 +284,18 @@ static bool _autocomplete()
     if (ctx.autocomplete_state == AUTOCOMPLETE_TEMPLATE_NOT_SET)
     {
         ctx.autocomplete_state = AUTOCOMPLETE_TEMPLATE_SET;
-        memcpy(ctx.autocomplete_buffer, ctx.command_buffer, ctx.current_command_length);
-        memset(&ctx.autocomplete_buffer[ctx.current_command_length], 0, sizeof(ctx.autocomplete_buffer) - ctx.current_command_length);
+        memcpy(ctx.autocomplete_buffer,
+               ctx.command_buffer,
+               ctx.current_command_length);
+        memset(&ctx.autocomplete_buffer[ctx.current_command_length],
+               0,
+               sizeof(ctx.autocomplete_buffer) - ctx.current_command_length);
     }
 
     size_t matched_command_index = msh_num_commands;
     size_t command_name_length = 0;
     size_t autocomplete_length = strlen(ctx.autocomplete_buffer);
+
     for (uint8_t j = 0; j < 2; j++)
     {
         for (size_t i = 0; i < msh_num_commands; i++)
@@ -285,12 +309,18 @@ static bool _autocomplete()
 
             if (i >= ctx.autocomplete_index_offset)
             {
-                if (strncmp(ctx.autocomplete_buffer, msh_commands[i].name, autocomplete_length) == 0)
+                if (strncmp(ctx.autocomplete_buffer,
+                            msh_commands[i].name,
+                            autocomplete_length) == 0)
                 {
                     matched_command_index = i;
                     ctx.autocomplete_index_offset = (i + 1) % msh_num_commands;
-                    memcpy(&ctx.command_buffer[autocomplete_length], &msh_commands[i].name[autocomplete_length], command_name_length - autocomplete_length);
-                    memset(&ctx.command_buffer[command_name_length], 0, sizeof(ctx.command_buffer) - command_name_length);
+                    memcpy(&ctx.command_buffer[autocomplete_length],
+                           &msh_commands[i].name[autocomplete_length],
+                           command_name_length - autocomplete_length);
+                    memset(&ctx.command_buffer[command_name_length],
+                           0,
+                           sizeof(ctx.command_buffer) - command_name_length);
                     ctx.current_command_length = command_name_length;
                     ctx.cursor_pointer = command_name_length;
                     break;
@@ -311,7 +341,8 @@ static bool _autocomplete()
         return false;
     }
 
-    _print_char('\r');
+    ctx.write('\r',
+              1);
     _move_cursor(KEY_CODE_CLEAR_LINE_AFTER_CURSOR);
     _print_command();
 
@@ -326,14 +357,17 @@ static bool _delete_key(char backspace_mode)
     }
 
     size_t offset = backspace_mode != KEY_CODE_BACKSPACE_ALT;
+
     ctx.command_buffer[ctx.current_command_length - offset] = '\0';
 
-    _print_char(backspace_mode);
+    ctx.write(backspace_mode,
+              1);
 
     if (ctx.cursor_pointer == ctx.current_command_length)
     {
         ctx.current_command_length--;
     }
+
     ctx.cursor_pointer--;
 
     ctx.autocomplete_state = AUTOCOMPLETE_TEMPLATE_NOT_SET;
@@ -365,7 +399,8 @@ static bool _special_char(char input)
     if (input == KEY_CODE_CLEAR_TERMINAL)
     {
         _clear_buffers();
-        _print_char(input);
+        ctx.write(input,
+                  1);
         _print_prompt();
     }
 
@@ -374,20 +409,21 @@ static bool _special_char(char input)
 
 static bool _add_alphanumeric(char input)
 {
-    if ((ctx.current_command_length == MAX_COMMAND_LENGTH) &&
-        (ctx.current_command_length == ctx.cursor_pointer))
+    if ((ctx.current_command_length == MAX_COMMAND_LENGTH) && (ctx.current_command_length == ctx.cursor_pointer))
     {
         return false;
     }
 
     ctx.command_buffer[ctx.cursor_pointer] = input;
 
-    _print_char(input);
+    ctx.write(input,
+              1);
 
     if (ctx.cursor_pointer == ctx.current_command_length)
     {
         ctx.current_command_length++;
     }
+
     ctx.cursor_pointer++;
 
     ctx.autocomplete_state = AUTOCOMPLETE_TEMPLATE_NOT_SET;
@@ -399,66 +435,78 @@ static bool _add_alphanumeric(char input)
 
 bool msh_process(char input)
 {
-    switch(input)
+    switch (input)
     {
-        case KEY_CODE_CR:
-        case KEY_CODE_LF:
-            _execute_command();
-            break;
-        case KEY_CODE_BACKSPACE:
-            _delete_key(KEY_CODE_BACKSPACE);
-            break;
-        case KEY_CODE_BACKSPACE_ALT:
-            _delete_key(KEY_CODE_BACKSPACE_ALT);
-            break;
-        case KEY_CODE_ESCAPE:
-            ctx.escape_state = ESCAPE_SET;
-            break;
-        case KEY_CODE_TAB:
-            _autocomplete();
-            break;
-        default:
-            if ((isalnum(input) || input == KEY_CODE_SPACE) && ctx.escape_state == ESCAPE_IDLE)
-            {
+    case KEY_CODE_CR:
+    case KEY_CODE_LF:
+        _execute_command();
+        break;
+    case KEY_CODE_BACKSPACE:
+        _delete_key(KEY_CODE_BACKSPACE);
+        break;
+    case KEY_CODE_BACKSPACE_ALT:
+        _delete_key(KEY_CODE_BACKSPACE_ALT);
+        break;
+    case KEY_CODE_ESCAPE:
+        ctx.escape_state = ESCAPE_SET;
+        break;
+    case KEY_CODE_TAB:
+        _autocomplete();
+        break;
+    default:
+
+        if ((isalnum(input) || (input == KEY_CODE_SPACE)) && (ctx.escape_state == ESCAPE_IDLE))
+        {
             _add_alphanumeric(input);
-            }
-            else
-            {
+        }
+        else
+        {
             _special_char(input);
-            }
-            break;
+        }
+
+        break;
     }
 
     return true;
 }
 
-bool msh_printf(const char* format, ...)
+bool msh_printf(const char *format,
+                ...)
 {
     va_list args;
-    va_start(args, format);
+
+    va_start(args,
+             format);
 
     _print_newline();
-    _msh_vsnprintf(format, args);
+    _msh_vsnprintf(format,
+                   args);
 
     va_end(args);
 
     return true;
 }
 
-bool msh_log(const char* format, ...)
+bool msh_log(const char *format,
+             ...)
 {
     if (!ctx.logs_enabled)
     {
         return false;
     }
 
-    _print_char('\r');
+    ctx.write('\r',
+              1);
     _move_cursor(KEY_CODE_CLEAR_LINE_AFTER_CURSOR);
 
-    /* print log */
     va_list args;
-    va_start(args, format);
-    _msh_vsnprintf(format, args);
+
+    va_start(args,
+             format);
+
+    _msh_vsnprintf(format,
+                   args);
+
     va_end(args);
 
     _print_newline();
@@ -470,6 +518,7 @@ bool msh_log(const char* format, ...)
 bool msh_enable_logs(bool enable)
 {
     ctx.logs_enabled = enable;
+
     return true;
 }
 

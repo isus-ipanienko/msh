@@ -72,12 +72,12 @@ int msh_log_en(int argc, char *argv[])
 
 /* Command list ---------------------------------------------------------- */
 
-static const struct msh_command_t commands[] = {
+static const msh_command_t commands[] = {
     {"help", msh_help, "lists all commands"},
     {"man", msh_man, "manual for the terminal"},
     {"log", msh_log_en, "on - turns logs on; off - turns logs off"},
     {"hello", msh_hello, "say hello!"},
 };
 
-const struct msh_command_t *const msh_commands = commands;
+const msh_command_t *const msh_commands = commands;
 const size_t msh_num_commands = ARRAY_SIZE(commands);
