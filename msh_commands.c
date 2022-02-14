@@ -25,13 +25,15 @@
 
 /* Commands -------------------------------------------------------------- */
 
-int msh_cmd_hello(const int argc, const char *const argv[])
+#define MSH_CMD_DEFINITION(_name) int msh_cmd_##_name(const int argc, const char *const argv[])
+
+MSH_CMD_DEFINITION(hello)
 {
     msh_printf("Hello world!");
     return 0;
 }
 
-int msh_cmd_help(const int argc, const char *const argv[])
+MSH_CMD_DEFINITION(help)
 {
     for (size_t i = 0; i < msh_commsnds_size; i++)
     {
@@ -40,7 +42,7 @@ int msh_cmd_help(const int argc, const char *const argv[])
     return 0;
 }
 
-int msh_cmd_man(const int argc, const char *const argv[])
+MSH_CMD_DEFINITION(man)
 {
     msh_printf("Use arrow keys to edit the current line.");
     msh_printf("Use ctrl + L to clear the widow.");
@@ -48,7 +50,7 @@ int msh_cmd_man(const int argc, const char *const argv[])
     return 0;
 }
 
-int msh_cmd_log(const int argc, const char *const argv[])
+MSH_CMD_DEFINITION(log)
 {
     if (argc != 2)
     {
