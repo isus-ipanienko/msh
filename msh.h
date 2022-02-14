@@ -9,26 +9,27 @@ typedef void (*write_callback_t)(const char *output,
 
 typedef struct
 {
-    int (*callback)(int argc,
-                    char *argv[]);
+    int (*callback)(const int argc,
+                    const char *const argv[]);
+    const size_t name_len;
     const char *const name;
-    const char *const help;
+    const char *const man;
 } msh_command_t;
 
 extern const msh_command_t *const msh_commands;
-extern const size_t msh_num_commands;
+extern const size_t msh_commsnds_size;
 
 /* Public methods -------------------------------------------------------- */
 
-bool msh_process(char input);
+bool msh_process(const char input);
 
-bool msh_printf(const char *format,
-                ...);
+int msh_printf(const char *format,
+               ...);
 
-bool msh_log(const char *format,
-             ...);
+int msh_log(const char *format,
+            ...);
 
-bool msh_enable_logs(bool enable);
+void msh_enable_logs(bool enable);
 
 bool msh_init(write_callback_t write);
 

@@ -7,39 +7,40 @@
 
 /* Includes -------------------------------------------------------------- */
 
-#include "msh.h"
-
 #include <string.h>
 
-/* Defines --------------------------------------------------------------- */
+#include "msh.h"
+
+/* Helper Functions / Macros --------------------------------------------- */
 
 #define ARRAY_SIZE(_arr) (sizeof(_arr) / sizeof(_arr[0]))
 
+/**
+ * @brief   if (ARG_MATCH(argv[n], "pattern")) matches "pattern" to the nth argument
+ * @note    argv[0] is the command name
+ */
+#define ARG_MATCH(_arg, _pattern) \
+    ((strncmp(_arg, _pattern, sizeof(_pattern) - 1) == 0) \
+     && (_arg[sizeof(_pattern) - 1] == '\0'))
+
 /* Commands -------------------------------------------------------------- */
 
-static bool _arg_match(const char* arg, const char* pattern)
-{
-    return (strncmp(arg, pattern, strlen(pattern)) == 0) && (arg[strlen(pattern)] == '\0');
-}
-
-/* Commands -------------------------------------------------------------- */
-
-int msh_hello(int argc, char *argv[])
+int msh_cmd_hello(const int argc, const char *const argv[])
 {
     msh_printf("Hello world!");
     return 0;
 }
 
-int msh_help(int argc, char *argv[])
+int msh_cmd_help(const int argc, const char *const argv[])
 {
-    for (size_t i = 0; i < msh_num_commands; i++)
+    for (size_t i = 0; i < msh_commsnds_size; i++)
     {
-        msh_printf("%s: %s", msh_commands[i].name, msh_commands[i].help);
+        msh_printf("%s: %s", msh_commands[i].name, msh_commands[i].man);
     }
     return 0;
 }
 
-int msh_man(int argc, char *argv[])
+int msh_cmd_man(const int argc, const char *const argv[])
 {
     msh_printf("Use arrow keys to edit the current line.");
     msh_printf("Use ctrl + L to clear the widow.");
@@ -47,18 +48,18 @@ int msh_man(int argc, char *argv[])
     return 0;
 }
 
-int msh_log_en(int argc, char *argv[])
+int msh_cmd_log(const int argc, const char *const argv[])
 {
     if (argc != 2)
     {
         return -1;
     }
 
-    if (_arg_match(argv[1], "on"))
+    if (ARG_MATCH(argv[1], "on"))
     {
         msh_enable_logs(true);
     }
-    else if (_arg_match(argv[1], "off"))
+    else if (ARG_MATCH(argv[1], "off"))
     {
         msh_enable_logs(false);
     }
@@ -72,12 +73,24 @@ int msh_log_en(int argc, char *argv[])
 
 /* Command list ---------------------------------------------------------- */
 
-static const msh_command_t commands[] = {
-    {"help", msh_help, "lists all commands"},
-    {"man", msh_man, "manual for the terminal"},
-    {"log", msh_log_en, "on - turns logs on; off - turns logs off"},
-    {"hello", msh_hello, "say hello!"},
+#define MSH_COMMANDS \
+    MSH_COMMAND(help, "lists all commands") \
+    MSH_COMMAND(man, "manual for the terminal") \
+    MSH_COMMAND(log, "on - turns logs on; off - turns logs off") \
+    MSH_COMMAND(hello, "say hello!")
+
+static const msh_command_t commands[] = 
+{
+#define MSH_COMMAND(_name, _man)    \
+    {                               \
+    .callback = msh_cmd_##_name,    \
+    .name_len = sizeof(#_name) - 1, \
+    .name = #_name,                 \
+    .man = _man                     \
+    },
+    MSH_COMMANDS
+#undef MSH_COMMAND
 };
 
 const msh_command_t *const msh_commands = commands;
-const size_t msh_num_commands = ARRAY_SIZE(commands);
+const size_t msh_commsnds_size = ARRAY_SIZE(commands);
