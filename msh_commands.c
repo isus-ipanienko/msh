@@ -11,45 +11,54 @@
 
 #include "msh.h"
 
-/* Helper Functions / Macros --------------------------------------------- */
+/* Helper Macros --------------------------------------------------------- */
 
 #define ARRAY_SIZE(_arr)    (sizeof(_arr) / sizeof(_arr[0]))
 
 /**
- * @brief   if (ARG_MATCH(argv[n], "pattern")) matches "pattern" to the nth argument
- * @note    argv[0] is the command name
+ * @brief   if (ARGV_MATCH(n, "pattern")) matches "pattern" to the nth argument
+ * @note    n = 0 is the command name
  */
-#define ARG_MATCH(_arg, _pattern) \
-    ((strncmp(_arg,               \
-              _pattern,           \
-              sizeof(_pattern) - 1) == 0) && (_arg[sizeof(_pattern) - 1] == '\0'))
+#define ARGV_MATCH(_argn, _pattern) \
+    ((strncmp(argv[_argn],          \
+              _pattern,             \
+              sizeof(_pattern) - 1) == 0) && (argv[_argn][sizeof(_pattern) - 1] == '\0'))
 
-/* Commands -------------------------------------------------------------- */
+#define ASSERT_ARGC(_n) \
+    do                  \
+    {                   \
+        if (argc != _n) \
+        {               \
+            return -1;  \
+        }               \
+    } while (0)
 
-#define MSH_CMD_DEFINITION(_name)       \
+#define MSH_CMD_DEF(_name)              \
     int msh_cmd_##_name(const int argc, \
                         const char *const argv[])
 
-MSH_CMD_DEFINITION(hello)
+/* Commands -------------------------------------------------------------- */
+
+MSH_CMD_DEF(hello)
 {
     msh_printf("Hello world!");
 
     return 0;
 }
 
-MSH_CMD_DEFINITION(help)
+MSH_CMD_DEF(help)
 {
-    for (size_t i = 0; i < msh_commsnds_size; i++)
+    for (size_t cmd = 0; cmd < msh_commsnds_size; cmd++)
     {
         msh_printf("%s: %s",
-                   msh_commands[i].name,
-                   msh_commands[i].man);
+                   msh_commands[cmd].name,
+                   msh_commands[cmd].man);
     }
 
     return 0;
 }
 
-MSH_CMD_DEFINITION(man)
+MSH_CMD_DEF(man)
 {
     msh_printf("Use arrow keys to edit the current line.");
     msh_printf("Use ctrl + L to clear the widow.");
@@ -58,20 +67,17 @@ MSH_CMD_DEFINITION(man)
     return 0;
 }
 
-MSH_CMD_DEFINITION(log)
+MSH_CMD_DEF(log)
 {
-    if (argc != 2)
-    {
-        return -1;
-    }
+    ASSERT_ARGC(2);
 
-    if (ARG_MATCH(argv[1],
-                  "on"))
+    if (ARGV_MATCH(1,
+                   "on"))
     {
         msh_enable_logs(true);
     }
-    else if (ARG_MATCH(argv[1],
-                       "off"))
+    else if (ARGV_MATCH(1,
+                        "off"))
     {
         msh_enable_logs(false);
     }
