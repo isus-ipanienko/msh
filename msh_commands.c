@@ -48,7 +48,7 @@ MSH_CMD_DEF(hello)
 
 MSH_CMD_DEF(help)
 {
-    for (size_t cmd = 0; cmd < msh_commsnds_size; cmd++)
+    for (size_t cmd = 0; cmd < msh_commands_size; cmd++)
     {
         msh_printf("%s: %s",
                    msh_commands[cmd].name,
@@ -115,4 +115,4 @@ static const msh_command_t commands[] =
 };
 
 const msh_command_t *const msh_commands = commands;
-const size_t msh_commsnds_size = ARRAY_SIZE(commands);
+const size_t msh_commands_size = ARRAY_SIZE(commands);

@@ -17,7 +17,7 @@ typedef struct
 } msh_command_t;
 
 extern const msh_command_t *const msh_commands;
-extern const size_t msh_commsnds_size;
+extern const size_t msh_commands_size;
 
 /* Public methods -------------------------------------------------------- */
 

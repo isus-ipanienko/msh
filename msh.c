@@ -70,14 +70,14 @@ static struct msh_context ctx;
 
 static void _print_newline()
 {
-    const char buff[2] =
+    const char write_buff[2] =
     {
         '\n',
         '\r'
     };
 
-    ctx.write("\n\r",
-              sizeof(buff));
+    ctx.write(write_buff,
+              sizeof(write_buff));
 }
 
 static void _print_prompt()
@@ -88,15 +88,15 @@ static void _print_prompt()
 
 static void _move_cursor(const char dir)
 {
-    const char dir_buff[3] =
+    const char write_buff[3] =
     {
         KEY_CODE_ESCAPE,
         KEY_CODE_BRACKET,
         dir
     };
 
-    ctx.write(dir_buff,
-              3);
+    ctx.write(write_buff,
+              sizeof(write_buff));
 }
 
 static void _seek_left()
@@ -202,7 +202,7 @@ static int _parse(const char *argv[])
 static bool _find_command(size_t *index,
                           const char *const cmd)
 {
-    for (size_t cmd_index = 0; cmd_index < msh_commsnds_size; cmd_index++)
+    for (size_t cmd_index = 0; cmd_index < msh_commands_size; cmd_index++)
     {
         if (cmd[msh_commands[cmd_index].name_len] == '\0')
         {
@@ -230,7 +230,7 @@ static void _execute_command()
         goto CLEANUP;
     }
 
-    size_t command_index = msh_commsnds_size;
+    size_t command_index = msh_commands_size;
 
     if (!_find_command(&command_index,
                        argv[0]))
@@ -268,12 +268,12 @@ static void _autocomplete()
                sizeof(ctx.autocomplete_buffer) - ctx.current_command_length);
     }
 
-    size_t matched_command_index = msh_commsnds_size;
+    size_t matched_command_index = msh_commands_size;
     size_t autocomplete_length = strlen(ctx.autocomplete_buffer);
 
     for (unsigned char attempts = 0; attempts < 2; attempts++)
     {
-        for (size_t candidate = 0; candidate < msh_commsnds_size; candidate++)
+        for (size_t candidate = 0; candidate < msh_commands_size; candidate++)
         {
             if (msh_commands[candidate].name_len <= autocomplete_length)
             {
@@ -287,7 +287,7 @@ static void _autocomplete()
                             autocomplete_length) == 0)
                 {
                     matched_command_index = candidate;
-                    ctx.autocomplete_candidate_index_offset = (candidate + 1) % msh_commsnds_size;
+                    ctx.autocomplete_candidate_index_offset = (candidate + 1) % msh_commands_size;
                     memcpy(&ctx.command_buffer[autocomplete_length],
                            &msh_commands[candidate].name[autocomplete_length],
                            msh_commands[candidate].name_len - autocomplete_length);
@@ -301,7 +301,7 @@ static void _autocomplete()
             }
         }
 
-        if (matched_command_index < msh_commsnds_size)
+        if (matched_command_index < msh_commands_size)
         {
             _clear_line();
             _print_command();
