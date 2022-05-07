@@ -20,9 +20,8 @@
  * @note    n = 0 is the command name
  */
 #define ARGV_MATCH(_argn, _pattern) \
-    ((strncmp(argv[_argn],          \
-              _pattern,             \
-              sizeof(_pattern) - 1) == 0) && (argv[_argn][sizeof(_pattern) - 1] == '\0'))
+    (strcmp(argv[_argn],            \
+            _pattern) == 0)
 
 #define ASSERT_ARGC(_n) \
     do                  \
