@@ -4,33 +4,41 @@
 #include <stddef.h>
 #include <stdbool.h>
 
-typedef void (*write_callback_t)(const char *output,
-                                 const size_t len);
+typedef void (*msh_write_cb_t)(const char *output, const size_t len);
 
-typedef struct
+#define MSH_RETCODES    \
+    X(MSH_INVALID_ARGC) \
+    X(MSH_INVALID_ARGS) \
+
+enum msh_ret {
+    MSH_OK = 0,
+#define X(_retcode) _retcode,
+    MSH_RETCODES
+#undef X
+    MSH_RET_TOP
+};
+
+struct msh_cmd
 {
-    int (*callback)(const int argc,
-                    const char *const argv[]);
-    const size_t name_len;
-    const char *const name;
+    enum msh_ret (*callback)(const int argc, const char *const argv[]);
     const char *const man;
-} msh_command_t;
+    const char *const name;
+    const size_t len;
+};
 
-extern const msh_command_t *const msh_commands;
-extern const size_t msh_commands_size;
+extern const struct msh_cmd *const msh_cmds;
+extern const size_t msh_cmd_cnt;
 
 /* Public methods -------------------------------------------------------- */
 
 bool msh_process(const char input);
 
-int msh_printf(const char *format,
-               ...);
+int msh_printf(const char *format, ...);
 
-int msh_log(const char *format,
-            ...);
+int msh_log(const char *format, ...);
 
 void msh_enable_logs(bool enable);
 
-bool msh_init(write_callback_t write);
+bool msh_init(msh_write_cb_t write);
 
 #endif /* INC_MSH_H_ */

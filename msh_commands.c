@@ -1,10 +1,3 @@
-/*
- * commands.c
- *
- *  Created on: Aug 21, 2021
- *      Author: pawel
- */
-
 /* Includes -------------------------------------------------------------- */
 
 #include <string.h>
@@ -13,99 +6,80 @@
 
 /* Helper Macros --------------------------------------------------------- */
 
-#define ARRAY_SIZE(_arr)    (sizeof(_arr) / sizeof(_arr[0]))
-
-/**
- * @brief   if (ARGV_MATCH(n, "pattern")) matches "pattern" to the nth argument
- * @note    n = 0 is the command name
- */
-#define ARGV_MATCH(_argn, _pattern) \
-    (strcmp(argv[_argn],            \
-            _pattern) == 0)
-
-#define ASSERT_ARGC(_n) \
-    do                  \
-    {                   \
-        if (argc != _n) \
-        {               \
-            return -1;  \
-        }               \
-    } while (0)
-
-#define MSH_CMD_DEF(_name)              \
-    int msh_cmd_##_name(const int argc, \
-                        const char *const argv[])
+#define ARRAY_SIZE(_arr) (sizeof(_arr) / sizeof(_arr[0]))
 
 /* Commands -------------------------------------------------------------- */
 
-MSH_CMD_DEF(hello)
+enum msh_ret msh_cmd_hello(const int argc, const char *const argv[])
 {
-    msh_printf("Hello world!");
-
-    return 0;
+    msh_printf("Hello world!\n");
+    return MSH_OK;
 }
 
-MSH_CMD_DEF(help)
+enum msh_ret msh_cmd_help(const int argc, const char *const argv[])
 {
-    for (size_t cmd = 0; cmd < msh_commands_size; cmd++)
-    {
-        msh_printf("%s: %s",
-                   msh_commands[cmd].name,
-                   msh_commands[cmd].man);
+    enum msh_ret ret = MSH_OK;
+
+    switch (argc) {
+    case 1:
+        msh_printf("Use arrow keys to edit the current line.\n");
+        msh_printf("Use ctrl + L to clear the widow.\n");
+        msh_printf("Use tab to autocomplete commands.\n");
+        msh_printf("Type 'help name' to print instructions for a command.\n");
+        msh_printf("Commands:\n");
+        for (size_t cmd = 0; cmd < msh_cmd_cnt; cmd++)
+            msh_printf("%s, ", msh_cmds[cmd].name);
+        msh_printf("\n");
+        break;
+    case 2:
+        ret = MSH_INVALID_ARGS;
+        for (size_t idx = 0; idx < msh_cmd_cnt; idx++) {
+            if (strcmp(argv[1], msh_cmds[idx].name) == 0) {
+                msh_printf("%s: %s\n", msh_cmds[idx].name, msh_cmds[idx].man);
+                ret = MSH_OK;
+                break;
+            }
+        }
+        break;
+    default:
+        ret = MSH_INVALID_ARGC;
+        break;
     }
 
-    return 0;
+    return ret;
 }
 
-MSH_CMD_DEF(man)
+enum msh_ret msh_cmd_log(const int argc, const char *const argv[])
 {
-    msh_printf("Use arrow keys to edit the current line.");
-    msh_printf("Use ctrl + L to clear the widow.");
-    msh_printf("Use tab to cycle through autocompleted commands.");
+    if (argc != 2)
+        return MSH_INVALID_ARGC;
 
-    return 0;
-}
-
-MSH_CMD_DEF(log)
-{
-    ASSERT_ARGC(2);
-
-    if (ARGV_MATCH(1,
-                   "on"))
-    {
+    if (strcmp(argv[1], "on") == 0)
         msh_enable_logs(true);
-    }
-    else if (ARGV_MATCH(1,
-                        "off"))
-    {
+    else if (strcmp(argv[1], "off") == 0)
         msh_enable_logs(false);
-    }
     else
-    {
-        return -2;
-    }
+        return MSH_INVALID_ARGS;
 
-    return 0;
+    return MSH_OK;
 }
 
 /* Command list ---------------------------------------------------------- */
 
-#define MSH_COMMANDS                                        \
-    MSH_COMMAND(help,                                       \
-                "lists all commands")                       \
-    MSH_COMMAND(man,                                        \
-                "manual for the terminal")                  \
-    MSH_COMMAND(log,                                        \
-                "on - turns logs on; off - turns logs off") \
-    MSH_COMMAND(hello,                                      \
+#define MSH_COMMANDS                                               \
+    MSH_COMMAND(help, msh_cmd_help,                                \
+                "prints manuals and instructions for the terminal")\
+    MSH_COMMAND(log, msh_cmd_log,                                  \
+                "on - turns logs on; off - turns logs off")        \
+    MSH_COMMAND(hello, msh_cmd_hello,                              \
                 "say hello!")
 
-static const msh_command_t commands[] =
+static const struct msh_cmd commands[] =
 {
-#define MSH_COMMAND(_name, _man)        \
+#define MSH_COMMAND(_name, _func, _man) \
     {                                   \
-        .callback = msh_cmd_##_name,    \
-        .name_len = sizeof(#_name) - 1, \
+        .callback = _func,              \
+        .len = sizeof(#_name) - 1,      \
         .name = #_name,                 \
         .man = _man                     \
     },
@@ -113,5 +87,5 @@ static const msh_command_t commands[] =
 #undef MSH_COMMAND
 };
 
-const msh_command_t *const msh_commands = commands;
-const size_t msh_commands_size = ARRAY_SIZE(commands);
+const struct msh_cmd *const msh_cmds = commands;
+const size_t msh_cmd_cnt = ARRAY_SIZE(commands);
